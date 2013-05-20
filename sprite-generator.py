@@ -70,9 +70,12 @@ except ImportError:
 COLUMNS = 50
 CELL_SIZE = ICON_SIZE[0] + 10, ICON_SIZE[1] + 10
 CELL_OFFSET = 5
-
-ICON_NAME = re.compile(r'glyphicons/png/glyphicons_\d{3}_([\w_@\+\-]+)\.png')
-
+PREFIX  = raw_input('Please specify an icon prefix [Press Enter for glyphicons default]: ')
+if not PREFIX:
+  PREFIX = "glyphicons_"
+  ICON_NAME = re.compile(r'glyphicons/png/%s\d{3}_([\w_@\+\-]+)\.png' % (PREFIX))
+else:
+  ICON_NAME = re.compile(r'\w+/png/%s\d+_([\w_@\+\-]+)\.png' % (PREFIX))
 SPRITE_CSS = 'sprites/glyphicons.css'
 SPRITE_FILE = 'sprites/glyphicons.png'
 SPRITE_WHITE_FILE = 'sprites/glyphicons-white.png'
@@ -116,14 +119,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>GLYPHICONS Sprite Generator</title>
+    <title>GLYPHICONS & Icon Sprite Generator</title>
     <link href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css" rel="stylesheet">
     <link href="glyphicons.css" rel="stylesheet">
   </head>
   <body>
     <div class="container">
       <p class="lead" style="margin-top: 1em;">
-        The <a href="http://glyphicons.com/">GLYPHICONS</a> Sprite Generator for <a href="https://twitter.github.com/bootstrap">Bootstrap</a>.
+        The <a href="http://glyphicons.com/">GLYPHICONS</a> & Icon Sprite Generator for <a href="https://twitter.github.com/bootstrap">Bootstrap</a>.
       </p>
       <hr>
       <p>Here are the results of the generated sprite:</p>
@@ -141,7 +144,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <p>
         <strong>GLYPHICONS FREE</strong> are released under the Creative Commons Attribution 3.0 Unported (CC BY 3.0). The GLYPHICONS FREE can be used both commercially and for personal use, but you must always add a link to glyphicons.com in a prominent place (e.g. the footer of a website), include the CC-BY license and the reference to glyphicons.com on every page using GLYPHICONS.
       </p>
-      <footer><p>Sprite Generator created by <a href="https://github.com/gmr">Gavin M. Roy</a> (<a href="https://twitter.com/crad">@Crad</a>)</p></footer>
+      <footer>
+      <p>Original Sprite Generator created by <a href="https://github.com/gmr">Gavin M. Roy</a> (<a href="https://twitter.com/crad">@Crad</a>)
+       - Adapted for any icons by <a href="https://github.com/rapturedesigner">Drian Naude</a> (<a href="https://twitter.com/rapturedesigner">@rapturedesigner</a>)</p>
+      </footer>
     </div>
   </body>
 </html>"""
@@ -189,19 +195,22 @@ def main():
 
     # Try and guess if this is pro or free
     directory = os.path.realpath(__file__).split('/')[-2]
-    if directory[-3:] == 'pro' and not PRO:
+    if directory[-3:] == 'pro' and not PRO and not PREFIX:
         print "GLYPHICONS PRO detected, using 2x icons for coloring and sizing"
+        PRO = True
+    if directory[-3:] == 'all' and not PRO and not PREFIX:
+        print "GLYPHICONS ALL detected, using 2x icons for coloring and sizing"
         PRO = True
 
     files = glob.glob("glyphicons/png/*.png")
     if not files:
-        print "ERROR: Did not find any PNG files, are you sure youre in glyphicons_free/glyphicons directory?"
+        print "ERROR: Did not find any PNG files, are you sure you're in glyphicons_free/glyphicons directory?"
         sys.exit(-1)
 
     # Count the number of files that will be used
     file_count = 0
     for filename in files:
-        if PRO and '@2x' not in filename:
+        if not PREFIX and PRO and '@2x' not in filename:
             continue
         file_count += 1
 
@@ -212,17 +221,24 @@ def main():
 
     # Iterate through all of the files in the png directory making the sprite
     for filename in files:
-
         # For use with GLYPHICONS PRO for better quality icons
-        if PRO and '@2x' not in filename:
+        if not PREFIX and PRO and '@2x' not in filename:
             continue
 
         # Get the name of the icon from the file
         match = ICON_NAME.findall(filename)
 
+        # Catch no matched icon error
+        if not match:
+          if PREFIX != "glyphicons_":
+            print "ERROR: Could not find any icons with the prefix '%s'" % (PREFIX)
+          else:
+            print "ERROR: Could not find any glyphicons! Are you sure you're are you sure youre in glyphicons_free/glyphicons directory?"
+          sys.exit(-1)
+       
         # Create the class name
         name = 'icon-%s' % match[0].replace('_', '-').replace('@2x', '')
-
+        #print name
         # Position in the sprite
         x = (column * CELL_SIZE[0]) + 5
         y = (row * CELL_SIZE[1]) + 5
